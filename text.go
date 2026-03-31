@@ -89,3 +89,11 @@ func lastTokenValue(tokens []chroma.Token) string {
 	}
 	return tokens[len(tokens)-1].Value
 }
+
+func isTextFile(filename string, mimeType string) bool {
+	switch mimeType {
+	case "application/json", "application/xml", "application/javascript", "application/typescript", "application/x-typescript":
+		return true
+	}
+	return lexers.Match(filename) != nil
+}

@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/mattn/go-isatty"
 )
 
@@ -24,8 +23,6 @@ type Config struct {
 type App struct {
 	config Config
 }
-
-var debugColor = termFgColor(color.RGBA{0x88, 0x88, 0x88, 0xFF})
 
 func main() {
 	app := App{
@@ -71,6 +68,7 @@ func main() {
 	os.Exit(0)
 }
 
+var debugColor = termFgColor(color.RGBA{0x88, 0x88, 0x88, 0xFF})
 func (app *App) printDebug(txt string, args ...any) {
 	if app.config.debug {
 		fmt.Fprint(os.Stdout, debugColor)
@@ -83,11 +81,14 @@ func (app *App) printFile(filename string) error {
 	mimeType := mimeTypeFromFilename(filename)
 	app.printDebug("File: %s\nMime Type: %s", filename, mimeType)
 	if strings.HasPrefix(mimeType, "image/") {
+		app.printDebug("image detected")
 		return app.printImageFile(filename)
 	}
 	if strings.HasPrefix(mimeType, "text/") || isTextFile(filename, mimeType) {
+		app.printDebug("text detected")
 		return app.printTextFile(filename)
 	}
+	app.printDebug("binary detected")
 	return app.printBinaryFile(filename)
 }
 
@@ -97,13 +98,4 @@ func mimeTypeFromFilename(filename string) string {
 		return "application/octet-stream"
 	}
 	return mimeType
-}
-
-func isTextFile(filename string, mimeType string) bool {
-	switch mimeType {
-	case "application/json", "application/xml", "application/javascript", "application/typescript", "application/x-typescript":
-		return true
-	}
-
-	return lexers.Match(filename) != nil
 }
