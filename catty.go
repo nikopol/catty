@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image/color"
 	"mime"
 	"os"
 	"path/filepath"
@@ -24,6 +25,8 @@ type App struct {
 	config Config
 }
 
+var debugColor = termFgColor(color.RGBA{0x88, 0x88, 0x88, 0xFF})
+
 func main() {
 	app := App{
 		config: Config{},
@@ -36,7 +39,7 @@ func main() {
 	flag.Parse()
 
 	if versionMode {
-		fmt.Printf("catty v.%s\n", version)
+		fmt.Printf("catty v%s\n", version)
 		os.Exit(0)
 	}
 
@@ -52,9 +55,7 @@ func main() {
 			app.config.raw = true
 		}
 		app.config.width = width
-		if app.config.debug {
-			fmt.Printf("columns width = %d\n", width)
-		}
+		app.printDebug("Output width: %d", width)
 	}
 
 	if !app.config.raw && !isatty.IsTerminal(os.Stdout.Fd()) {
@@ -70,15 +71,21 @@ func main() {
 	os.Exit(0)
 }
 
+func (app *App) printDebug(txt string, args ...any) {
+	if app.config.debug {
+		fmt.Fprint(os.Stdout, debugColor)
+		fmt.Fprintf(os.Stdout, txt, args...)
+		fmt.Fprintln(os.Stdout, TERM_COLOR_RESET)
+	}
+}
+
 func (app *App) printFile(filename string) error {
 	mimeType := mimeTypeFromFilename(filename)
-	if app.config.debug {
-		fmt.Printf("File: %s\nMime Type: %s\n", filename, mimeType)
-	}
+	app.printDebug("File: %s\nMime Type: %s", filename, mimeType)
 	if strings.HasPrefix(mimeType, "image/") {
 		return app.printImageFile(filename)
 	}
-	if strings.HasPrefix(mimeType, "text/") || isHighlightedTextFile(filename, mimeType) {
+	if strings.HasPrefix(mimeType, "text/") || isTextFile(filename, mimeType) {
 		return app.printTextFile(filename)
 	}
 	return app.printBinaryFile(filename)
@@ -92,9 +99,9 @@ func mimeTypeFromFilename(filename string) string {
 	return mimeType
 }
 
-func isHighlightedTextFile(filename string, mimeType string) bool {
+func isTextFile(filename string, mimeType string) bool {
 	switch mimeType {
-	case "application/json", "application/xml", "application/javascript":
+	case "application/json", "application/xml", "application/javascript", "application/typescript", "application/x-typescript":
 		return true
 	}
 
