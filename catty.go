@@ -7,6 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/mattn/go-isatty"
 )
 
 const version = "0.0.1"
@@ -43,16 +46,21 @@ func main() {
 	}
 
 	if app.config.width == 0 {
-		width, err := termWidth()
+		width, _, err := termSize()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "unable to compute output width")
-			os.Exit(2)
+			width = 65535
+			app.config.raw = true
 		}
 		app.config.width = width
 		if app.config.debug {
 			fmt.Printf("columns width = %d\n", width)
 		}
 	}
+
+	if !app.config.raw && !isatty.IsTerminal(os.Stdout.Fd()) {
+		app.config.raw = true
+	}
+
 	for i := 0; i < flag.NArg(); i++ {
 		if err := app.printFile(flag.Arg(i)); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -70,6 +78,9 @@ func (app *App) printFile(filename string) error {
 	if strings.HasPrefix(mimeType, "image/") {
 		return app.printImageFile(filename)
 	}
+	if strings.HasPrefix(mimeType, "text/") || isHighlightedTextFile(filename, mimeType) {
+		return app.printTextFile(filename)
+	}
 	return app.printBinaryFile(filename)
 }
 
@@ -79,4 +90,13 @@ func mimeTypeFromFilename(filename string) string {
 		return "application/octet-stream"
 	}
 	return mimeType
+}
+
+func isHighlightedTextFile(filename string, mimeType string) bool {
+	switch mimeType {
+	case "application/json", "application/xml", "application/javascript":
+		return true
+	}
+
+	return lexers.Match(filename) != nil
 }

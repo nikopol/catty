@@ -17,6 +17,10 @@ func (app *App) printBinaryFile(filename string) error {
 	}
 	defer file.Close()
 
+	if app.config.raw {
+		return printRawBinaryFile(file)
+	}
+
 	prefixWidth := 12 // " 0000000000 "
 	bytesPerLine := (app.config.width - prefixWidth - 6) / 4
 	if bytesPerLine < 1 {
@@ -51,15 +55,9 @@ func (app *App) printBinaryFile(filename string) error {
 
 		var out strings.Builder
 		// INDEX PANEL
-		if app.config.raw {
-			fmt.Fprintf(&out, " %10x ", lineOffset)
-		} else {
-			fmt.Fprintf(&out, "%s %10d %s", termIndexPanelColor, lineOffset, TERM_COLOR_RESET)
-		}
+		fmt.Fprintf(&out, "%s %10d %s", termIndexPanelColor, lineOffset, TERM_COLOR_RESET)
 		// HEX DUMP PANEL
-		if !app.config.raw {
-			fmt.Fprint(&out, termHexDumpPanelColor)
-		}
+		fmt.Fprint(&out, termHexDumpPanelColor)
 		fmt.Fprint(&out, "│")
 		for _, b := range line {
 			fmt.Fprintf(&out, " %02x", b)
@@ -69,30 +67,22 @@ func (app *App) printBinaryFile(filename string) error {
 		}
 		out.WriteString(" │")
 		// ASCII DUMP PANEL
-		if !app.config.raw {
-			fmt.Fprint(&out, termAsciiDumpPanelColor)
-		}
+		fmt.Fprint(&out, termAsciiDumpPanelColor)
 		out.WriteString(" ")
 		for _, b := range line {
 			if strconv.IsPrint(rune(b)) {
 				out.WriteByte(b)
 			} else {
-				if !app.config.raw {
-					fmt.Fprint(&out, termAsciiUnprintableColor)
-					out.WriteByte('.')
-					fmt.Fprint(&out, termAsciiDumpPanelColor)
-				} else {
-					out.WriteByte('.')
-				}
+				fmt.Fprint(&out, termAsciiUnprintableColor)
+				out.WriteByte('.')
+				fmt.Fprint(&out, termAsciiDumpPanelColor)
 			}
 		}
 		for i := 0; i < fillGap; i++ {
 			out.WriteByte(' ')
 		}
 		out.WriteByte(' ')
-		if !app.config.raw {
-			fmt.Fprint(&out, TERM_COLOR_RESET)
-		}
+		fmt.Fprint(&out, TERM_COLOR_RESET)
 		fmt.Println(out.String())
 		lineOffset += len(line)
 		line = line[:0]
@@ -116,6 +106,36 @@ func (app *App) printBinaryFile(filename string) error {
 		}
 	}
 	flushLine()
+
+	return nil
+}
+
+func printRawBinaryFile(r io.Reader) error {
+	buf := make([]byte, 2048)
+	first := true
+
+	for {
+		n, err := r.Read(buf)
+		if n > 0 {
+			for _, b := range buf[:n] {
+				if !first {
+					fmt.Fprint(os.Stdout, " ")
+				}
+				fmt.Fprintf(os.Stdout, "%02x", b)
+				first = false
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	if !first {
+		fmt.Fprintln(os.Stdout)
+	}
 
 	return nil
 }
