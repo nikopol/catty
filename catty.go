@@ -92,11 +92,11 @@ func (app *App) printFile(filename string) error {
 		mimeType = mimeTypeFromFilename(filename)
 	}
 	app.printDebug("File: %s\nMime Type: %s", filename, mimeType)
-	if strings.HasPrefix(mimeType, "image/") || mimeType == "image" {
+	if strings.HasPrefix(mimeType, "image") {
 		app.printDebug("image detected")
 		return app.printImageFile(filename)
 	}
-	if strings.HasPrefix(mimeType, "text/") || mimeType == "text" || isTextFile(filename, mimeType) {
+	if strings.HasPrefix(mimeType, "text") || isTextFile(filename, mimeType) {
 		app.printDebug("text detected")
 		return app.printTextFile(filename)
 	}
