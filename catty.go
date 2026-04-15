@@ -17,7 +17,9 @@ const version = "0.0.1"
 type Config struct {
 	debug bool
 	raw   bool
-	width int
+	maxWidth int
+	maxHeight int
+	mimeType string
 }
 
 type App struct {
@@ -31,7 +33,9 @@ func main() {
 	var versionMode bool
 	flag.BoolVar(&app.config.debug, "d", false, "debug mode")
 	flag.BoolVar(&app.config.raw, "r", false, "raw mode (no decoration)")
-	flag.IntVar(&app.config.width, "w", 0, "max columns (default: terminal width)")
+	flag.IntVar(&app.config.maxWidth, "w", 0, "max columns (default: terminal width)")
+	flag.IntVar(&app.config.maxHeight, "h", 0, "max lines (used for image only, default: terminal height)")
+	flag.StringVar(&app.config.mimeType, "m", "", "force file mime type")
 	flag.BoolVar(&versionMode, "v", false, "show version")
 	flag.Parse()
 
@@ -45,15 +49,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if app.config.width == 0 {
-		width, _, err := termSize()
-		if err != nil {
-			width = 65535
-			app.config.raw = true
-		}
-		app.config.width = width
-		app.printDebug("Output width: %d", width)
+	termWidth, termHeight, err := termSize()
+	if err != nil {
+		termWidth = 65535
+		termHeight = 65535
+		app.config.raw = true
 	}
+	if app.config.maxWidth == 0 {
+		app.config.maxWidth = termWidth
+	}
+	if app.config.maxHeight == 0 {
+		app.config.maxHeight = termHeight
+	}
+
+	app.printDebug("Output: %d x %d", app.config.maxWidth, app.config.maxHeight)
 
 	if !app.config.raw && !isatty.IsTerminal(os.Stdout.Fd()) {
 		app.config.raw = true
@@ -78,13 +87,16 @@ func (app *App) printDebug(txt string, args ...any) {
 }
 
 func (app *App) printFile(filename string) error {
-	mimeType := mimeTypeFromFilename(filename)
+	mimeType := app.config.mimeType
+	if mimeType == "" {
+		mimeType = mimeTypeFromFilename(filename)
+	}
 	app.printDebug("File: %s\nMime Type: %s", filename, mimeType)
-	if strings.HasPrefix(mimeType, "image/") {
+	if strings.HasPrefix(mimeType, "image/") || mimeType == "image" {
 		app.printDebug("image detected")
 		return app.printImageFile(filename)
 	}
-	if strings.HasPrefix(mimeType, "text/") || isTextFile(filename, mimeType) {
+	if strings.HasPrefix(mimeType, "text/") || mimeType == "text" || isTextFile(filename, mimeType) {
 		app.printDebug("text detected")
 		return app.printTextFile(filename)
 	}

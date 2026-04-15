@@ -22,7 +22,7 @@ func (app *App) printBinaryFile(filename string) error {
 	}
 
 	prefixWidth := 12 // " 0000000000 "
-	bytesPerLine := (app.config.width - prefixWidth - 6) / 4
+	bytesPerLine := (app.config.maxWidth - prefixWidth - 6) / 4
 	if bytesPerLine < 1 {
 		return errors.New("term too small")
 	}

@@ -62,7 +62,7 @@ func medianColor(colors []color.Color) color.Color {
 	}
 }
 
-func resizeToMaxWidth(img image.Image, maxWidth int, addYScale float64) *image.RGBA {
+func resize(img image.Image, maxWidth int, maxHeight int, addYScale float64) *image.RGBA {
 	bounds := img.Bounds()
 	srcWidth := bounds.Dx()
 	srcHeight := bounds.Dy()
@@ -74,6 +74,11 @@ func resizeToMaxWidth(img image.Image, maxWidth int, addYScale float64) *image.R
 
 	scale := float64(width) / float64(srcWidth)
 	height := max(1, int(float64(srcHeight)*scale*addYScale))
+	if height > maxHeight {
+		scale = float64(srcWidth) / (float64(srcHeight) * addYScale)
+		height = maxHeight
+		width = min(maxWidth, int(float64(height) * scale))
+	}
 
 	dst := image.NewRGBA(image.Rect(0, 0, width, height))
 	xScale := float64(srcWidth) / float64(width)
@@ -113,9 +118,7 @@ func resizeToMaxWidth(img image.Image, maxWidth int, addYScale float64) *image.R
 }
 
 func (app *App) printImage(img image.Image) {
-	maxWidth := app.config.width
-	termYScale := 5.0 / 9.0
-	resized := resizeToMaxWidth(img, maxWidth, termYScale)
+	resized := resize(img, app.config.maxWidth, app.config.maxHeight, 5.0 / 9.0)
 	bounds := resized.Bounds()
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		var line strings.Builder
