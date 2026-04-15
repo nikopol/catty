@@ -33,5 +33,5 @@ Usage of catty:
 ```
 
 # credits
-[Chroma](github.com/alecthomas/chroma) for color syntaxing
-[go-isatty](github.com/mattn/go-isatty)
+- [Chroma](github.com/alecthomas/chroma) for color syntaxing
+- [go-isatty](github.com/mattn/go-isatty)
