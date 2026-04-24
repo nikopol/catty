@@ -32,20 +32,47 @@ func (app *App) printBinaryFile(filename string) error {
 	lineOffset := 0
 
 	termIndexPanelColor := termFgBgColor(
-		color.RGBA{0xA0,0xA0,0xA0,0xFF},
-		color.RGBA{0x20,0x20,0x66,0xFF},
+		color.RGBA{0x70,0x80,0x9C,0xFF},
+		color.RGBA{0x36,0x43,0x59,0xFF},
 	)
 	termHexDumpPanelColor := termFgBgColor(
 		color.RGBA{0xFF,0xFF,0xFF,0xFF},
 		color.RGBA{0x00,0x00,0x00,0xFF},
 	)
-	termAsciiDumpPanelColor := termFgBgColor(
-		color.RGBA{0xC0,0xC0,0xC0,0xFF},
-		color.RGBA{0x20,0x20,0x66,0xFF},
+	termASCIIColor0 := termFgBgColor(
+		color.RGBA{0x88,0x88,0x88,0xFF},
+		color.RGBA{0x00,0x00,0x00,0xFF},
 	)
-	termAsciiUnprintableColor := termFgColor(
-		color.RGBA{0xFF,0x66,0x66,0xFF},
+	termASCIIColor1_19 := termFgBgColor(
+		color.RGBA{0x47,0xB7,0x62,0xFF},
+		color.RGBA{0x00,0x00,0x00,0xFF},
 	)
+	termASCIIColor20_7E := termFgBgColor(
+		color.RGBA{0x6E,0xAD,0xBC,0xFF},
+		color.RGBA{0x00,0x00,0x00,0xFF},
+	)
+	termASCIIColor7F_FE := termFgBgColor(
+		color.RGBA{0xC1,0xC7,0x75,0xFF},
+		color.RGBA{0x00,0x00,0x00,0xFF},
+	)
+	termASCIIColorFF := termFgBgColor(
+		color.RGBA{0xFF,0xFF,0xFF,0xFF},
+		color.RGBA{0x00,0x00,0x00,0xFF},
+	)
+
+	getByteColor := func(b byte) string {
+		if b == 0 {
+			return termASCIIColor0;
+		} else if b < 0x20 {
+			return termASCIIColor1_19;
+		} else if b < 0x7F {
+			return termASCIIColor20_7E;
+		} else if b < 0xFF {
+			return termASCIIColor7F_FE;
+		} else {
+			return termASCIIColorFF;
+		}
+	}
 
 	flushLine := func() {
 		if len(line) == 0 {
@@ -60,22 +87,19 @@ func (app *App) printBinaryFile(filename string) error {
 		fmt.Fprint(&out, termHexDumpPanelColor)
 		fmt.Fprint(&out, "│")
 		for _, b := range line {
-			fmt.Fprintf(&out, " %02x", b)
+			fmt.Fprintf(&out, "%s %02X", getByteColor(b), b)
 		}
 		for i := 0; i < fillGap; i++ {
 			out.WriteString("   ")
 		}
-		out.WriteString(" │")
+		fmt.Fprintf(&out, " %s│ ", termHexDumpPanelColor)
 		// ASCII DUMP PANEL
-		fmt.Fprint(&out, termAsciiDumpPanelColor)
-		out.WriteString(" ")
 		for _, b := range line {
+			fmt.Fprint(&out, getByteColor(b))
 			if strconv.IsPrint(rune(b)) {
 				out.WriteByte(b)
 			} else {
-				fmt.Fprint(&out, termAsciiUnprintableColor)
-				out.WriteByte('.')
-				fmt.Fprint(&out, termAsciiDumpPanelColor)
+				out.WriteString("•")
 			}
 		}
 		for i := 0; i < fillGap; i++ {
