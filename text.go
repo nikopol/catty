@@ -17,13 +17,16 @@ func (app *App) printTextFile(filename string) error {
 	if err != nil {
 		return err
 	}
+	return app.printTextContent(content, filename)
+}
 
+func (app *App) printTextContent(data []byte, filename string) error {
 	if app.config.raw {
-		_, err := os.Stdout.Write(content)
+		_, err := os.Stdout.Write(data)
 		return err
 	}
 
-	source := string(content)
+	source := string(data)
 	lexer := lexers.Match(filename)
 	if lexer == nil {
 		lexer = lexers.Analyse(source)

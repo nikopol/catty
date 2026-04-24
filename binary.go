@@ -16,9 +16,12 @@ func (app *App) printBinaryFile(filename string) error {
 		return err
 	}
 	defer file.Close()
+	return app.printBinaryReader(file)
+}
 
+func (app *App) printBinaryReader(r io.Reader) error {
 	if app.config.raw {
-		return printRawBinaryFile(file)
+		return printRawBinaryFile(r)
 	}
 
 	prefixWidth := 12 // " 0000000000 "
@@ -113,7 +116,7 @@ func (app *App) printBinaryFile(filename string) error {
 	}
 
 	for {
-		n, err := file.Read(buf)
+		n, err := r.Read(buf)
 		if n > 0 {
 			for _, b := range buf[:n] {
 				line = append(line, b)

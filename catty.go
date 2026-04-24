@@ -1,10 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"image/color"
+	"io"
 	"mime"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +19,7 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-const version = "0.0.2"
+const version = "1.0"
 
 type Config struct {
 	debug bool
@@ -44,11 +51,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	if flag.NArg() == 0 {
-		fmt.Fprintln(os.Stderr, "what file?")
-		os.Exit(1)
-	}
-
 	termWidth, termHeight, err := termSize()
 	if err != nil {
 		termWidth = 65535
@@ -68,8 +70,19 @@ func main() {
 		app.config.raw = true
 	}
 
+	if hasStdinPipe() {
+		if err := app.printByData(os.Stdin); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(9)
+		}
+		os.Exit(0)
+	} else if flag.NArg() == 0 {
+		fmt.Fprintln(os.Stderr, "what file?")
+		os.Exit(1)
+	}
+
 	for i := 0; i < flag.NArg(); i++ {
-		if err := app.printFile(flag.Arg(i)); err != nil {
+		if err := app.printByFilename(flag.Arg(i)); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(9)
 		}
@@ -86,7 +99,11 @@ func (app *App) printDebug(txt string, args ...any) {
 	}
 }
 
-func (app *App) printFile(filename string) error {
+func hasStdinPipe() bool {
+	return !isatty.IsTerminal(os.Stdin.Fd()) && !isatty.IsCygwinTerminal(os.Stdin.Fd())
+}
+
+func (app *App) printByFilename(filename string) error {
 	mimeType := app.config.mimeType
 	if mimeType == "" {
 		mimeType = mimeTypeFromFilename(filename)
@@ -100,8 +117,41 @@ func (app *App) printFile(filename string) error {
 		app.printDebug("text detected")
 		return app.printTextFile(filename)
 	}
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return app.printByData(f)
+}
+
+func (app *App) printByData(file *os.File) error {
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	mimeType := app.config.mimeType
+	if mimeType == "" {
+		mimeType = http.DetectContentType(data)
+	}
+	app.printDebug("Mime Type: %s", mimeType)
+
+	if strings.HasPrefix(mimeType, "image") {
+		app.printDebug("image detected")
+		img, _, err := image.Decode(bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
+		app.printImage(img)
+		return nil
+	}
+	if strings.HasPrefix(mimeType, "text") {
+		app.printDebug("text detected")
+		return app.printTextContent(data, "")
+	}
 	app.printDebug("binary detected")
-	return app.printBinaryFile(filename)
+	return app.printBinaryReader(bytes.NewReader(data))
 }
 
 func mimeTypeFromFilename(filename string) string {
