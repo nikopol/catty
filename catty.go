@@ -40,6 +40,7 @@ func main() {
 	var versionMode bool
 	flag.BoolVar(&app.config.debug, "d", false, "debug mode")
 	flag.BoolVar(&app.config.raw, "r", false, "raw mode (no decoration)")
+	flag.BoolVar(&app.config.raw, "p", false, "alias for -r (no decoration)")
 	flag.IntVar(&app.config.maxWidth, "w", 0, "max columns (default: terminal width)")
 	flag.IntVar(&app.config.maxHeight, "h", 0, "max lines (used for image only, default: terminal height)")
 	flag.StringVar(&app.config.mimeType, "m", "", "force file mime type")
