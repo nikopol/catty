@@ -19,7 +19,7 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-const version = "1.0"
+const version = "1.01"
 
 type Config struct {
 	debug bool
@@ -38,6 +38,8 @@ func main() {
 		config: Config{},
 	}
 	var versionMode bool
+	var forceImageMode bool
+	var forceBinaryMode bool
 	flag.BoolVar(&app.config.debug, "d", false, "debug mode")
 	flag.BoolVar(&app.config.raw, "r", false, "raw mode (no decoration)")
 	flag.BoolVar(&app.config.raw, "p", false, "alias for -r (no decoration)")
@@ -45,11 +47,19 @@ func main() {
 	flag.IntVar(&app.config.maxHeight, "h", 0, "max lines (used for image only, default: terminal height)")
 	flag.StringVar(&app.config.mimeType, "m", "", "force file mime type")
 	flag.BoolVar(&versionMode, "v", false, "show version")
+	flag.BoolVar(&forceBinaryMode, "bin", false, "force hex dump mode (alias for -m bin)")
+	flag.BoolVar(&forceImageMode, "img", false, "force image mode (alias for -m image)")
 	flag.Parse()
 
 	if versionMode {
 		fmt.Printf("catty v%s\n", version)
 		os.Exit(0)
+	}
+	if forceBinaryMode {
+		app.config.mimeType = "binary"
+	}
+	if forceImageMode {
+		app.config.mimeType = "image"
 	}
 
 	termWidth, termHeight, err := termSize()
